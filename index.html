@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1877F2">
+<title>Fahrschüler-Rating</title>
+<style>
+:root{--bg:#0f172a;--card:#111827;--muted:#94a3b8;--pri:#1877F2;--ok:#10b981;--warn:#f59e0b;--err:#ef4444}
+*{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial;
+background:linear-gradient(180deg,#0b1220,#0f172a);color:#e5e7eb;min-height:100vh}
+.container{max-width:920px;margin:0 auto;padding:16px}
+h1{font-size:1.25rem;margin:0 0 12px 0}
+.card{background:#0b1220;border:1px solid #1f2937;border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row > *{flex:1 1 180px}
+input,select,textarea,button{width:100%;padding:10px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb}
+button{cursor:pointer;background:var(--pri);border:0}
+button.ghost{background:transparent;border:1px solid #334155}
+small{color:var(--muted)}
+.badge{display:inline-block;padding:3px 8px;border:1px solid #334155;border-radius:999px;color:#cbd5e1}
+.list-item{display:flex;align-items:flex-start;justify-content:space-between;padding:10px;border:1px solid #1f2937;border-radius:12px;margin-bottom:8px;background:#0b1220}
+.stars button{background:transparent;border:0;font-size:20px;line-height:1;padding:2px}
+.stars .on{color:#fbbf24}
+.hidden{display:none}
+hr{border:0;border-top:1px solid #1f2937;margin:12px 0}
+footer{opacity:.8;font-size:.9rem;margin-top:16px}
+.lock{display:flex;gap:8px;align-items:center}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Fahrschüler-Rating</h1>
+  <div class="card">
+    <div class="row">
+      <input id="studentName" placeholder="Name">
+      <select id="klasse">
+        <option value="B">Klasse B</option>
+        <option value="BE">Klasse BE</option>
+        <option value="A">Klasse A</option>
+        <option value="A2">Klasse A2</option>
+        <option value="AM">Klasse AM</option>
+        <option value="C">Klasse C</option>
+        <option value="CE">Klasse CE</option>
+      </select>
+      <input id="datum" type="date">
+    </div>
+
+    <div class="row">
+      <select id="kriterium">
+        <option>Pünktlichkeit</option>
+        <option>Fahrzeugbedienung</option>
+        <option>Spiegel/Schulterblick</option>
+        <option>Vorfahrt & Regeln</option>
+        <option>Parken</option>
+        <option>Abbiegen/Einordnen</option>
+        <option>Autobahn</option>
+        <option>Sicherheitsgefühl</option>
+        <option>Selbstständigkeit</option>
+        <option>Theorie-Wissen</option>
+      </select>
+      <div class="stars" id="stars"></div>
+      <input id="note" placeholder="Kurznotiz (optional)">
+    </div>
+
+    <div class="row">
+      <textarea id="details" rows="3" placeholder="Details, nächste Schritte, Hausaufgabe…"></textarea>
+    </div>
+
+    <div class="row">
+      <button id="add">Eintrag speichern</button>
+      <button class="ghost" id="clearForm">Formular leeren</button>
+    </div>
+    <small>Alle Daten bleiben lokal auf deinem Gerät (LocalStorage). Export/Import verfügbar.</small>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <input id="search" placeholder="Suche nach Name oder Notiz">
+      <select id="filterKlasse">
+        <option value="">Alle Klassen</option>
+        <option value="B">B</option>
+        <option value="BE">BE</option>
+        <option value="A">A</option>
+        <option value="A2">A2</option>
+        <option value="AM">AM</option>
+        <option value="C">C</option>
+        <option value="CE">CE</option>
+      </select>
+      <select id="sortBy">
+        <option value="date_desc">Neueste zuerst</option>
+        <option value="date_asc">Älteste zuerst</option>
+        <option value="name_asc">Name A→Z</option>
+        <option value="rating_desc">Beste Bewertung</option>
+      </select>
+    </div>
+    <div class="row">
+      <button id="exportJSON">Export JSON</button>
+      <button id="exportCSV">Export CSV</button>
+      <input id="importFile" type="file" accept=".json">
+      <button class="ghost" id="deleteAll">Alle Daten löschen</button>
+    </div>
+  </div>
+
+  <div id="list"></div>
+
+  <footer>
+    <div class="lock">
+      <input id="pin" type="password" placeholder="App-PIN setzen/entsperren (optional)">
+      <button id="setPin" class="ghost">PIN setzen</button>
+      <button id="unlock" class="ghost">Entsperren</button>
+    </div>
+    <hr>
+    <small>Impressum: privat genutzte Bewertungs-App. Keine Cloud. DSGVO-Hinweis: personenbezogene Daten nur mit Einwilligung speichern.</small>
+  </footer>
+</div>
+
+<script>
+// Simple star rating
+let currentStars = 3;
+const starsEl = document.getElementById('stars');
+function renderStars() {
+  starsEl.innerHTML = '';
+  for (let i=1; i<=5; i++) {
+    const b = document.createElement('button');
+    b.textContent = i <= currentStars ? '★' : '☆';
+    if (i <= currentStars) b.classList.add('on');
+    b.addEventListener('click', () => { currentStars = i; renderStars(); });
+    starsEl.appendChild(b);
+  }
+}
+renderStars();
+
+const key = 'fsr_entries_v1';
+const pinKey = 'fsr_pin_sha';
+
+function sha256(str) {
+  // naive SHA-256 via SubtleCrypto if available
+  if (window.crypto && window.crypto.subtle) {
+    const enc = new TextEncoder().encode(str);
+    return crypto.subtle.digest('SHA-256', enc).then(buf => {
+      return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    });
+  } else {
+    return Promise.resolve(str); // fallback no real hashing
+  }
+}
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
+}
+function save(list) {
+  localStorage.setItem(key, JSON.stringify(list));
+}
+
+function addEntry() {
+  const name = document.getElementById('studentName').value.trim();
+  const klasse = document.getElementById('klasse').value;
+  const datum = document.getElementById('datum').value || new Date().toISOString().slice(0,10);
+  const kriterium = document.getElementById('kriterium').value;
+  const note = document.getElementById('note').value.trim();
+  const details = document.getElementById('details').value.trim();
+  if (!name) { alert('Name fehlt'); return; }
+  const list = load();
+  list.push({ id: crypto.randomUUID(), name, klasse, datum, kriterium, stars: currentStars, note, details, ts: Date.now() });
+  save(list);
+  clearForm();
+  render();
+}
+
+function clearForm() {
+  ['studentName','note','details'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('datum').value='';
+  currentStars = 3; renderStars();
+}
+
+function del(id) {
+  if (!confirm('Eintrag wirklich löschen?')) return;
+  const list = load().filter(e => e.id !== id);
+  save(list); render();
+}
+
+function edit(id) {
+  const list = load();
+  const e = list.find(x => x.id === id);
+  if (!e) return;
+  const newNote = prompt('Notiz ändern:', e.note || '');
+  if (newNote === null) return;
+  e.note = newNote;
+  save(list); render();
+}
+
+function render() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const fk = document.getElementById('filterKlasse').value;
+  const sort = document.getElementById('sortBy').value;
+  let list = load().filter(e =>
+    (!fk || e.klasse === fk) &&
+    (!q || (e.name.toLowerCase().includes(q) || (e.note||'').toLowerCase().includes(q) || (e.details||'').toLowerCase().includes(q)))
+  );
+  list.sort((a,b)=>{
+    if (sort==='date_desc') return b.ts - a.ts;
+    if (sort==='date_asc') return a.ts - b.ts;
+    if (sort==='name_asc') return a.name.localeCompare(b.name);
+    if (sort==='rating_desc') return b.stars - a.stars;
+    return 0;
+  });
+  const wrap = document.getElementById('list');
+  wrap.innerHTML='';
+  list.forEach(e => {
+    const div = document.createElement('div');
+    div.className = 'list-item';
+    const left = document.createElement('div');
+    left.innerHTML = `<div><strong>${e.name}</strong> · <span class="badge">${e.klasse}</span> · <small>${e.datum}</small></div>
+      <div><small>${e.kriterium}</small></div>
+      <div class="stars" aria-hidden="true">${'★'.repeat(e.stars)}${'☆'.repeat(5-e.stars)}</div>
+      ${e.note ? `<div><small>${e.note}</small></div>`:''}
+      ${e.details ? `<div><small>${e.details}</small></div>`:''}`;
+    const right = document.createElement('div');
+    const be = document.createElement('button'); be.className='ghost'; be.textContent='Bearbeiten'; be.onclick=()=>edit(e.id);
+    const bd = document.createElement('button'); bd.className='ghost'; bd.textContent='Löschen'; bd.onclick=()=>del(e.id);
+    right.appendChild(be); right.appendChild(bd);
+    div.appendChild(left); div.appendChild(right);
+    wrap.appendChild(div);
+  });
+}
+
+function exportJSON() {
+  const data = JSON.stringify(load(), null, 2);
+  download('fahrschueler_rating_export.json', data, 'application/json');
+}
+function exportCSV() {
+  const cols = ['id','name','klasse','datum','kriterium','stars','note','details','ts'];
+  const rows = load().map(e => cols.map(k => `"${(e[k] ?? '').toString().replace(/"/g,'""')}"`).join(','));
+  const csv = cols.join(',') + '\n' + rows.join('\n');
+  download('fahrschueler_rating_export.csv', csv, 'text/csv');
+}
+function download(filename, content, type) {
+  const blob = new Blob([content], {type});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function setPin() {
+  const pin = document.getElementById('pin').value;
+  if (!pin) { alert('PIN eingeben'); return; }
+  const hash = await sha256(pin);
+  localStorage.setItem(pinKey, hash);
+  alert('PIN gesetzt.');
+}
+async function unlock() {
+  const pin = document.getElementById('pin').value;
+  const saved = localStorage.getItem(pinKey);
+  if (!saved) { alert('Keine PIN gesetzt.'); return; }
+  const hash = await sha256(pin);
+  if (hash === saved) {
+    sessionStorage.setItem('fsr_unlocked', '1');
+    alert('Entsperrt.');
+    document.body.classList.remove('locked');
+  } else {
+    alert('Falsche PIN.');
+  }
+}
+
+function checkLock() {
+  const saved = localStorage.getItem(pinKey);
+  if (saved && sessionStorage.getItem('fsr_unlocked') !== '1') {
+    document.body.classList.add('locked');
+    document.querySelectorAll('.card, #list').forEach(el=>el.style.filter='blur(6px)');
+  } else {
+    document.querySelectorAll('.card, #list').forEach(el=>el.style.filter='none');
+  }
+}
+
+document.getElementById('add').addEventListener('click', addEntry);
+document.getElementById('clearForm').addEventListener('click', clearForm);
+document.getElementById('search').addEventListener('input', render);
+document.getElementById('filterKlasse').addEventListener('change', render);
+document.getElementById('sortBy').addEventListener('change', render);
+document.getElementById('exportJSON').addEventListener('click', exportJSON);
+document.getElementById('exportCSV').addEventListener('click', exportCSV);
+document.getElementById('importFile').addEventListener('change', (e)=>{
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (Array.isArray(data)) { save(data); render(); alert('Import ok.'); }
+      else alert('Ungültiges Format.');
+    } catch { alert('Fehler beim Import.'); }
+  };
+  reader.readAsText(file);
+});
+document.getElementById('setPin').addEventListener('click', setPin);
+document.getElementById('unlock').addEventListener('click', unlock);
+
+render(); checkLock();
+
+// Register SW
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+}
+</script>
+</body>
+</html>
