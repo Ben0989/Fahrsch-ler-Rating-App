@@ -1,157 +1,594 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Fahrschüler-Rating</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#1877F2">
-  <style>
-    body { font-family:sans-serif; background:#0f172a; color:#e2e8f0; margin:0; padding:1rem; }
-    h1 { font-size:1.4rem; }
-    select, input, button, textarea { width:100%; padding:8px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; margin-bottom:10px; }
-    button { background:#1877F2; border:none; color:white; font-weight:bold; }
-    .section { background:#1e293b; padding:1rem; border-radius:12px; margin-bottom:1rem; }
-    .rating-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; gap:10px; }
-    .stars button { font-size:1.3rem; background:none; border:none; color:#ccc; padding:0 3px; }
-    .stars .on { color:#fbbf24; }
-    label { display:block; margin-bottom:0.2rem; font-size:0.9rem; }
-    .entry { border:1px solid #334155; padding:10px; border-radius:8px; margin-bottom:10px; background:#0f172a; }
-    footer { font-size:0.8rem; opacity:0.6; margin-top:2rem; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Fahrschüler – Beobachtung & Dokumentation</title>
+<meta name="theme-color" content="#0f172a" />
+<style>
+:root{--pri:#28a745;--bg:#0f172a;--card:#1e293b;--txt:#f8fafc;--mut:#94a3b8;--bd:#475569}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe UI,Roboto,sans-serif;padding:12px}
+h1,h2,h3,h4{margin:.4rem 0}
+small{color:var(--mut)}
+.card{background:var(--card);border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.45);padding:12px;margin-top:12px}
+input,select,textarea,button{width:100%;padding:.6rem;border-radius:10px;border:1px solid var(--bd);background:#0b1220;color:var(--txt)}
+textarea{resize:vertical}
+button{cursor:pointer}
+button.primary{background:var(--pri);border:0;color:#fff}
+button.ghost{background:#1e293b;border:1px solid var(--bd);color:var(--txt)}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{flex:1}
+.grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.tabs{display:flex;gap:6px;margin:10px 0;flex-wrap:wrap}
+.tabs button{flex:1;background:#334155;border:1px solid var(--bd);color:#fff}
+.tabs button.active{background:var(--pri);border-color:var(--pri)}
+.hidden{display:none}
+table{width:100%;border-collapse:collapse;margin:.5rem 0}
+th,td{border:1px solid var(--bd);padding:.35rem;text-align:center}
+th.sticky{position:sticky;top:0;background:#223047}
+.label{font-weight:600;margin-top:.35rem;display:block}
+.hr{height:1px;background:var(--bd);opacity:.5;margin:.8rem 0}
+.badge{display:inline-block;padding:.2rem .5rem;border-radius:.6rem;border:1px solid var(--bd);color:var(--mut);font-size:.8rem}
+pre{white-space:pre-wrap;word-break:break-word}
+</style>
 </head>
 <body>
-<h1>Fahrschüler-Rating v2.1</h1>
 
-<div class="section">
-  <label>Fahrschüler auswählen:</label>
-  <select id="studentSelect"></select>
+<h1>Fahrschüler – Beobachtung & Dokumentation</h1>
 
-  <label>Neuer Schüler:</label>
-  <input id="newStudentName" placeholder="Max Mustermann">
-
-  <label>Führerscheinklasse:</label>
-  <select id="newStudentKlasse">
-    <option value="AM">AM</option><option value="A1">A1</option><option value="A2">A2</option>
-    <option value="A">A</option><option value="B">B</option><option value="BE">BE</option>
-    <option value="C1">C1</option><option value="C1E">C1E</option><option value="C">C</option>
-    <option value="CE">CE</option><option value="D1">D1</option><option value="D1E">D1E</option>
-    <option value="D">D</option><option value="DE">DE</option><option value="L">L</option><option value="T">T</option>
+<!-- SCHÜLER-VERWALTUNG -->
+<div class="card">
+  <h2>Fahrschüler</h2>
+  <label class="label">Auswählen</label>
+  <select id="studentSelect" onchange="onSelectStudent()">
+    <option value="">-- Bitte wählen --</option>
   </select>
-  <button onclick="addStudent()">Schüler hinzufügen</button>
+
+  <div class="hr"></div>
+
+  <div class="row">
+    <div>
+      <label class="label">Neuer Schüler</label>
+      <input id="newStudentName" placeholder="z. B. Max Mustermann" />
+    </div>
+    <div>
+      <label class="label">Führerscheinklasse(n)</label>
+      <select id="klasseSelect" multiple size="6">
+        <option>AM</option><option>A1</option><option>A2</option><option>A</option>
+        <option>B</option><option>BE</option><option>B97</option><option>B197</option><option>C1</option><option>C1E</option><option>C</option>
+        <option>CE</option><option>D1</option><option>D1E</option><option>D</option><option>L</option><option>T</option>
+      </select>
+    </div>
+  </div>
+  <div class="row">
+    <button class="primary" onclick="addStudent()">Schüler hinzufügen</button>
+    <button class="ghost" onclick="deleteStudent()">Schüler löschen</button>
+  </div>
+  <small>Speicherung lokal auf diesem Gerät. Offline nutzbar.</small>
 </div>
 
-<div class="section">
-  <label>Datum:</label>
-  <input type="date" id="datum">
-
-  <div id="ratingsContainer"></div>
-
-  <label>Zusätzliche Notiz:</label>
-  <textarea id="notiz" rows="3"></textarea>
-
-  <button onclick="saveRating()">Bewertung speichern</button>
+<!-- TABS -->
+<div class="tabs">
+  <button id="tab-beratung"  onclick="switchTab('beratung')">Beratung</button>
+  <button id="tab-theorie"   onclick="switchTab('theorie')">Theorie</button>
+  <button id="tab-praxis"    onclick="switchTab('praxis')">Praxis</button>
+  <button id="tab-uebersicht"onclick="switchTab('uebersicht')">Übersicht</button>
 </div>
 
-<div class="section">
-  <label>Alle Bewertungen:</label>
-  <div id="log"></div>
+<!-- BERATUNG – PDF 03 1:1 -->
+<div id="beratung" class="card">
+  <h3>Beobachtungshilfe – Beratungsgespräch</h3>
+
+  <div class="grid">
+    <div><label class="label">Datum</label><input type="date" id="b_datum"></div>
+    <div><label class="label">Dauer (Min)</label><input type="number" id="b_dauer"></div>
+    <div><label class="label">Gesprächspartner</label><input id="b_partner" placeholder="Fahrschüler, Elternteil, …"></div>
+    <div><label class="label">Fahrerlaubnisklasse</label><input id="b_klasse" placeholder="B, BE, A …"></div>
+  </div>
+
+  <div class="hr"></div>
+
+  <div class="grid">
+    <label><input type="checkbox" id="b_inhalte"> Inhalte/Ausbildung erklärt</label>
+    <label><input type="checkbox" id="b_aengste"> Ängste/Erwartungen erfragt</label>
+    <label><input type="checkbox" id="b_fragen"> Rückfragen geklärt</label>
+  </div>
+
+  <label class="label">Bemerkung</label>
+  <textarea id="b_bem" rows="3"></textarea>
+
+  <label class="label">Fehlende Informationen</label>
+  <textarea id="b_fehl" rows="2"></textarea>
+
+  <div class="grid">
+    <div>
+      <label class="label">Kosten / Unterlagen</label>
+      <textarea id="b_kosten" rows="2"></textarea>
+    </div>
+    <div>
+      <label class="label">Gesamteindruck</label>
+      <textarea id="b_eindruck" rows="2"></textarea>
+    </div>
+  </div>
+
+  <div class="row">
+    <button class="primary" onclick="saveBeratung()">Beratung speichern</button>
+  </div>
 </div>
 
-<footer>Alle Daten bleiben lokal gespeichert.</footer>
+<!-- THEORIE – PDF 05 1:1 (mit °) -->
+<div id="theorie" class="card hidden">
+  <h3>Beobachtungshilfe – Theorieunterricht</h3>
+
+  <div class="grid">
+    <div><label class="label">Datum</label><input type="date" id="t_datum"></div>
+    <div><label class="label">Uhrzeit</label><input type="time" id="t_time"></div>
+    <div><label class="label">Anzahl FS*</label><input type="number" id="t_anz"></div>
+    <div><label class="label">Lektion / Thema</label><input id="t_thema"></div>
+  </div>
+
+  <div class="grid">
+    <label><input type="checkbox" id="t_grund"> Grundstoff</label>
+    <label><input type="checkbox" id="t_zusatz"> Zusatzstoff</label>
+  </div>
+
+  <h4>Fahrlehrerverhalten</h4>
+  <table>
+    <thead>
+      <tr>
+        <th class="sticky">Aspekt</th>
+        <th>++</th><th>+</th><th>°</th><th>–</th><th>––</th>
+        <th>Bemerkung</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Pro Zeile eine Radio-Gruppe (nur eine Auswahl erlaubt) -->
+      <tr>
+        <td>Umgangston</td>
+        <td><input type="radio" name="t_ton" value="++"></td>
+        <td><input type="radio" name="t_ton" value="+"></td>
+        <td><input type="radio" name="t_ton" value="°"></td>
+        <td><input type="radio" name="t_ton" value="-"></td>
+        <td><input type="radio" name="t_ton" value="--"></td>
+        <td><input id="t_ton_bem"></td>
+      </tr>
+      <tr>
+        <td>Variantenreiche Lautstärke</td>
+        <td><input type="radio" name="t_laut" value="++"></td>
+        <td><input type="radio" name="t_laut" value="+"></td>
+        <td><input type="radio" name="t_laut" value="°"></td>
+        <td><input type="radio" name="t_laut" value="-"></td>
+        <td><input type="radio" name="t_laut" value="--"></td>
+        <td><input id="t_laut_bem"></td>
+      </tr>
+      <tr>
+        <td>Arbeit mit der Stimme (Betonung)</td>
+        <td><input type="radio" name="t_stimme" value="++"></td>
+        <td><input type="radio" name="t_stimme" value="+"></td>
+        <td><input type="radio" name="t_stimme" value="°"></td>
+        <td><input type="radio" name="t_stimme" value="-"></td>
+        <td><input type="radio" name="t_stimme" value="--"></td>
+        <td><input id="t_stimme_bem"></td>
+      </tr>
+      <tr>
+        <td>Sprechtempo</td>
+        <td><input type="radio" name="t_tempo" value="++"></td>
+        <td><input type="radio" name="t_tempo" value="+"></td>
+        <td><input type="radio" name="t_tempo" value="°"></td>
+        <td><input type="radio" name="t_tempo" value="-"></td>
+        <td><input type="radio" name="t_tempo" value="--"></td>
+        <td><input id="t_tempo_bem"></td>
+      </tr>
+      <tr>
+        <td>Fachbegriffe/Alltagssprache</td>
+        <td><input type="radio" name="t_begr" value="++"></td>
+        <td><input type="radio" name="t_begr" value="+"></td>
+        <td><input type="radio" name="t_begr" value="°"></td>
+        <td><input type="radio" name="t_begr" value="-"></td>
+        <td><input type="radio" name="t_begr" value="--"></td>
+        <td><input id="t_begr_bem"></td>
+      </tr>
+      <tr>
+        <td>Gestik/Bewegung</td>
+        <td><input type="radio" name="t_gestik" value="++"></td>
+        <td><input type="radio" name="t_gestik" value="+"></td>
+        <td><input type="radio" name="t_gestik" value="°"></td>
+        <td><input type="radio" name="t_gestik" value="-"></td>
+        <td><input type="radio" name="t_gestik" value="--"></td>
+        <td><input id="t_gestik_bem"></td>
+      </tr>
+      <tr>
+        <td>Blickkontakt</td>
+        <td><input type="radio" name="t_blick" value="++"></td>
+        <td><input type="radio" name="t_blick" value="+"></td>
+        <td><input type="radio" name="t_blick" value="°"></td>
+        <td><input type="radio" name="t_blick" value="-"></td>
+        <td><input type="radio" name="t_blick" value="--"></td>
+        <td><input id="t_blick_bem"></td>
+      </tr>
+      <tr>
+        <td>Mimik</td>
+        <td><input type="radio" name="t_mimik" value="++"></td>
+        <td><input type="radio" name="t_mimik" value="+"></td>
+        <td><input type="radio" name="t_mimik" value="°"></td>
+        <td><input type="radio" name="t_mimik" value="-"></td>
+        <td><input type="radio" name="t_mimik" value="--"></td>
+        <td><input id="t_mimik_bem"></td>
+      </tr>
+      <tr>
+        <td>Lehrer–Schüler–Verhältnis</td>
+        <td><input type="radio" name="t_ls" value="++"></td>
+        <td><input type="radio" name="t_ls" value="+"></td>
+        <td><input type="radio" name="t_ls" value="°"></td>
+        <td><input type="radio" name="t_ls" value="-"></td>
+        <td><input type="radio" name="t_ls" value="--"></td>
+        <td><input id="t_ls_bem"></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="row">
+    <div>
+      <h4>Methoden</h4>
+      <label><input type="checkbox" id="t_m_frontal"> Frontalunterricht</label>
+      <label><input type="checkbox" id="t_m_lehr"> Lehrgespräch</label>
+      <label><input type="checkbox" id="t_m_gruppe"> Gruppen-/Partnerarbeit</label>
+      <label><input type="checkbox" id="t_m_fragen"> Fragen stellen</label>
+      <label><input type="checkbox" id="t_m_disk"> Diskussion</label>
+    </div>
+    <div>
+      <h4>Medien</h4>
+      <label><input type="checkbox" id="t_med_lehrbuch"> Lehrbuch</label>
+      <label><input type="checkbox" id="t_med_blatt"> Arbeitsblätter</label>
+      <label><input type="checkbox" id="t_med_white"> Whiteboard/Tafel</label>
+      <label><input type="checkbox" id="t_med_beamer"> Laptop/Beamer/Smartboard</label>
+      <label><input type="checkbox" id="t_med_handy"> Handy</label>
+    </div>
+  </div>
+
+  <label class="label">Stimmung im Unterricht</label><textarea id="t_stimmung" rows="2"></textarea>
+  <label class="label">Reaktionen der FS* auf Fragen/Aufgaben</label><textarea id="t_reaktion" rows="2"></textarea>
+  <label class="label">Zusätzliche Methoden</label><textarea id="t_meth_extra" rows="2"></textarea>
+  <label class="label">Zusätzliche Medien</label><textarea id="t_med_extra" rows="2"></textarea>
+  <label class="label">Bemerkung</label><textarea id="t_bem" rows="2"></textarea>
+
+  <div class="row">
+    <button class="primary" onclick="saveTheorie()">Theorie speichern</button>
+  </div>
+</div>
+
+<!-- PRAXIS – PDF 04 1:1 -->
+<div id="praxis" class="card hidden">
+  <h3>Beobachtungshilfe – Praktische Ausbildung</h3>
+
+  <div class="row">
+    <div><label class="label">Datum</label><input type="date" id="p_datum"></div>
+    <div><label class="label">Dauer (Min)</label><input type="number" id="p_dauer"></div>
+    <div>
+      <label class="label">Art der Stunde</label>
+      <select id="p_art">
+        <option>Grundausbildung</option><option>Überlandfahrt</option>
+        <option>Autobahnfahrt</option><option>Nachtfahrt</option>
+        <option>Prüfungsvorbereitung</option>
+      </select>
+    </div>
+  </div>
+
+  <label class="label">Inhalte</label><textarea id="p_inhalte" rows="2"></textarea>
+
+  <div class="row">
+    <div>
+      <h4>Methoden</h4>
+      <label><input type="checkbox" id="p_m_demo"> Demonstration</label>
+      <label><input type="checkbox" id="p_m_verb"> Verbale Anleitung</label>
+      <label><input type="checkbox" id="p_m_nachf"> Nachfahren</label>
+      <label><input type="checkbox" id="p_m_reflex"> Reflexion</label>
+    </div>
+    <div>
+      <h4>Medien</h4>
+      <label><input type="checkbox" id="p_med_modell"> Modellauto</label>
+      <label><input type="checkbox" id="p_med_tablet"> Tablet</label>
+      <label><input type="checkbox" id="p_med_blatt"> Arbeitsblatt</label>
+      <label><input type="checkbox" id="p_med_schSkizze"> Skizzen / Zeichnungen</label>
+    </div>
+  </div>
+
+  <h4>Beobachtung – Fahrkompetenzen</h4>
+  <table>
+    <thead>
+      <tr>
+        <th class="sticky">Aspekt</th>
+        <th>++</th><th>+</th><th>°</th><th>–</th><th>––</th>
+        <th>Bemerkung</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Fahrzeugbedienung</td>
+        <td><input type="radio" name="p_bed" value="++"></td>
+        <td><input type="radio" name="p_bed" value="+"></td>
+        <td><input type="radio" name="p_bed" value="°"></td>
+        <td><input type="radio" name="p_bed" value="-"></td>
+        <td><input type="radio" name="p_bed" value="--"></td>
+        <td><input id="p_bed_bem"></td>
+      </tr>
+      <tr>
+        <td>Spiegel/Schulterblick</td>
+        <td><input type="radio" name="p_sp" value="++"></td>
+        <td><input type="radio" name="p_sp" value="+"></td>
+        <td><input type="radio" name="p_sp" value="°"></td>
+        <td><input type="radio" name="p_sp" value="-"></td>
+        <td><input type="radio" name="p_sp" value="--"></td>
+        <td><input id="p_sp_bem"></td>
+      </tr>
+      <tr>
+        <td>Vorfahrt/Regeln</td>
+        <td><input type="radio" name="p_vr" value="++"></td>
+        <td><input type="radio" name="p_vr" value="+"></td>
+        <td><input type="radio" name="p_vr" value="°"></td>
+        <td><input type="radio" name="p_vr" value="-"></td>
+        <td><input type="radio" name="p_vr" value="--"></td>
+        <td><input id="p_vr_bem"></td>
+      </tr>
+      <tr>
+        <td>Parken</td>
+        <td><input type="radio" name="p_park" value="++"></td>
+        <td><input type="radio" name="p_park" value="+"></td>
+        <td><input type="radio" name="p_park" value="°"></td>
+        <td><input type="radio" name="p_park" value="-"></td>
+        <td><input type="radio" name="p_park" value="--"></td>
+        <td><input id="p_park_bem"></td>
+      </tr>
+      <tr>
+        <td>Abbiegen/Einordnen</td>
+        <td><input type="radio" name="p_ab" value="++"></td>
+        <td><input type="radio" name="p_ab" value="+"></td>
+        <td><input type="radio" name="p_ab" value="°"></td>
+        <td><input type="radio" name="p_ab" value="-"></td>
+        <td><input type="radio" name="p_ab" value="--"></td>
+        <td><input id="p_ab_bem"></td>
+      </tr>
+      <tr>
+        <td>Autobahn</td>
+        <td><input type="radio" name="p_abahn" value="++"></td>
+        <td><input type="radio" name="p_abahn" value="+"></td>
+        <td><input type="radio" name="p_abahn" value="°"></td>
+        <td><input type="radio" name="p_abahn" value="-"></td>
+        <td><input type="radio" name="p_abahn" value="--"></td>
+        <td><input id="p_abahn_bem"></td>
+      </tr>
+      <tr>
+        <td>Sicherheitsgefühl</td>
+        <td><input type="radio" name="p_sich" value="++"></td>
+        <td><input type="radio" name="p_sich" value="+"></td>
+        <td><input type="radio" name="p_sich" value="°"></td>
+        <td><input type="radio" name="p_sich" value="-"></td>
+        <td><input type="radio" name="p_sich" value="--"></td>
+        <td><input id="p_sich_bem"></td>
+      </tr>
+      <tr>
+        <td>Selbstständigkeit</td>
+        <td><input type="radio" name="p_self" value="++"></td>
+        <td><input type="radio" name="p_self" value="+"></td>
+        <td><input type="radio" name="p_self" value="°"></td>
+        <td><input type="radio" name="p_self" value="-"></td>
+        <td><input type="radio" name="p_self" value="--"></td>
+        <td><input id="p_self_bem"></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <label class="label">Stimmung</label><textarea id="p_stimmung" rows="2"></textarea>
+  <label class="label">Beobachtung/Notiz</label><textarea id="p_bem" rows="3"></textarea>
+
+  <div class="row">
+    <button class="primary" onclick="savePraxis()">Praxis speichern</button>
+  </div>
+</div>
+
+<!-- ÜBERSICHT -->
+<div id="uebersicht" class="card hidden">
+  <h3>Übersicht</h3>
+  <div id="overview"></div>
+</div>
 
 <script>
-const kategorien = [
-  "Pünktlichkeit", "Fahrzeugbedienung", "Spiegel/Schulterblick",
-  "Vorfahrt & Regeln", "Parken", "Abbiegen/Einordnen",
-  "Autobahn", "Sicherheitsgefühl", "Selbstständigkeit", "Theorie-Wissen"
-];
+/* =================== STORAGE KEYS =================== */
+const LS_STUDENTS="fs_students_v1";
+const LS_BER="fs_beratung_v1";
+const LS_THEO="fs_theorie_v1";
+const LS_PRAX="fs_praxis_v1";
+const LS_CUR="fs_current";
 
-let students = JSON.parse(localStorage.getItem('fsr_v2_students')||'[]');
-let ratings = JSON.parse(localStorage.getItem('fsr_v2_ratings')||'[]');
-let currentStars = {};
+/* =================== HELPERS =================== */
+const getJ=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||d);}catch(_){return JSON.parse(d)}};
+const setJ=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const q=(s)=>document.querySelector(s);
+const id=(s)=>document.getElementById(s);
+function activeSID(){return localStorage.getItem(LS_CUR)||"";}
+function ensureSID(){const s=activeSID(); if(!s){alert("Bitte zuerst einen Fahrschüler wählen."); return null;} return s;}
 
-function $(id){ return document.getElementById(id); }
-
-function renderStudents(){
-  const sel = $("studentSelect");
-  sel.innerHTML = '';
-  students.forEach((s,i) => {
-    const o = document.createElement("option");
-    o.value = s.id;
-    o.textContent = s.name + " (" + s.klasse + ")";
-    sel.appendChild(o);
-  });
+/* =================== STUDENTS =================== */
+function loadStudents(){
+  const data=getJ(LS_STUDENTS,"{}");
+  const sel=id("studentSelect");
+  sel.innerHTML='<option value="">-- Bitte wählen --</option>'+
+    Object.keys(data).map(k=>`<option value="${k}">${data[k].name} (${(data[k].klassen||[]).join(", ")})</option>`).join("");
+  const cur=activeSID(); if(cur && data[cur]) sel.value=cur;
 }
-
 function addStudent(){
-  const name = $("newStudentName").value.trim();
-  const klasse = $("newStudentKlasse").value;
-  if (!name) return alert("Name fehlt");
-  const id = crypto.randomUUID();
-  students.push({id, name, klasse});
-  localStorage.setItem('fsr_v2_students', JSON.stringify(students));
-  $("newStudentName").value = '';
-  renderStudents();
+  const name=id("newStudentName").value.trim();
+  const klassen=Array.from(id("klasseSelect").selectedOptions).map(o=>o.value);
+  if(!name) return alert("Name fehlt.");
+  if(klassen.length===0) return alert("Mindestens eine Klasse wählen.");
+  const data=getJ(LS_STUDENTS,"{}");
+  const sid=crypto.randomUUID();
+  data[sid]={name,klassen};
+  setJ(LS_STUDENTS,data);
+  id("newStudentName").value=""; id("klasseSelect").selectedIndex=-1;
+  localStorage.setItem(LS_CUR,sid);
+  loadStudents();
+  alert("Schüler angelegt.");
+}
+function deleteStudent(){
+  const sid=activeSID(); if(!sid) return alert("Kein Schüler gewählt.");
+  if(!confirm("Diesen Schüler samt Einträgen löschen?")) return;
+  const S=getJ(LS_STUDENTS,"{}"); const B=getJ(LS_BER,"{}"); const T=getJ(LS_THEO,"{}"); const P=getJ(LS_PRAX,"{}");
+  delete S[sid]; delete B[sid]; delete T[sid]; delete P[sid];
+  setJ(LS_STUDENTS,S); setJ(LS_BER,B); setJ(LS_THEO,T); setJ(LS_PRAX,P);
+  localStorage.removeItem(LS_CUR);
+  loadStudents(); id("overview").innerHTML="";
+  alert("Gelöscht.");
+}
+function onSelectStudent(){
+  const v=id("studentSelect").value;
+  if(v) localStorage.setItem(LS_CUR,v);
 }
 
-function renderRatingsForm(){
-  const wrap = $("ratingsContainer");
-  wrap.innerHTML = '';
-  kategorien.forEach(kat => {
-    currentStars[kat] = 3;
-    const div = document.createElement("div");
-    div.className = "rating-row";
-    div.innerHTML = `<label style="flex:1">${kat}</label><div class="stars" id="s_${kat}" style="flex:2"></div>`;
-    wrap.appendChild(div);
-    renderStars(kat);
+/* =================== TABS =================== */
+function switchTab(tab){
+  ["beratung","theorie","praxis","uebersicht"].forEach(t=>{
+    id(t).classList.add("hidden");
+    id("tab-"+t).classList.remove("active");
   });
+  id(tab).classList.remove("hidden");
+  id("tab-"+tab).classList.add("active");
+  if(tab==="uebersicht") renderOverview();
 }
 
-function renderStars(kat){
-  const el = $("s_" + kat);
-  el.innerHTML = '';
-  for (let i=1;i<=5;i++){
-    const b = document.createElement("button");
-    b.innerText = i <= currentStars[kat] ? "★" : "☆";
-    if (i <= currentStars[kat]) b.classList.add("on");
-    b.onclick = () => { currentStars[kat] = i; renderStars(kat); };
-    el.appendChild(b);
-  }
-}
-
-function saveRating(){
-  const studentId = $("studentSelect").value;
-  const datum = $("datum").value || new Date().toISOString().slice(0,10);
-  const notiz = $("notiz").value.trim();
-  const eintrag = {
-    id: crypto.randomUUID(),
-    studentId, datum, notiz,
-    kategorien: {...currentStars}
-  };
-  ratings.push(eintrag);
-  localStorage.setItem('fsr_v2_ratings', JSON.stringify(ratings));
-  $("notiz").value = '';
-  renderLog();
-}
-
-function renderLog(){
-  const wrap = $("log");
-  wrap.innerHTML = '';
-  ratings.slice().reverse().forEach(r => {
-    const s = students.find(s => s.id === r.studentId);
-    const div = document.createElement("div");
-    div.className = "entry";
-    const header = `${r.datum} – ${s ? s.name : "??"} (${s?.klasse || "?"})`;
-    const catlines = Object.entries(r.kategorien).map(([k,v]) => `${k}: ${"★".repeat(v)}${"☆".repeat(5-v)}`).join("<br>");
-    div.innerHTML = `<b>${header}</b><br>${catlines}${r.notiz ? "<br><i>"+r.notiz+"</i>":""}`;
-    wrap.appendChild(div);
+/* =================== BERATUNG SAVE =================== */
+function saveBeratung(){
+  const sid=ensureSID(); if(!sid) return;
+  const all=getJ(LS_BER,"{}");
+  all[sid]=all[sid]||[];
+  all[sid].push({
+    datum:id("b_datum").value || new Date().toISOString().slice(0,10),
+    dauer:id("b_dauer").value,
+    partner:id("b_partner").value,
+    klasse:id("b_klasse").value,
+    inhalte:id("b_inhalte").checked,
+    aengste:id("b_aengste").checked,
+    fragen:id("b_fragen").checked,
+    bem:id("b_bem").value,
+    fehl:id("b_fehl").value,
+    kosten:id("b_kosten").value,
+    eindruck:id("b_eindruck").value,
+    ts:Date.now()
   });
+  setJ(LS_BER,all);
+  alert("Beratung gespeichert.");
 }
 
-renderStudents();
-renderRatingsForm();
-renderLog();
+/* =================== THEORIE SAVE =================== */
+function valRadio(name){const x=[...document.getElementsByName(name)].find(e=>e.checked);return x?x.value:"";}
+function saveTheorie(){
+  const sid=ensureSID(); if(!sid) return;
+  const all=getJ(LS_THEO,"{}");
+  all[sid]=all[sid]||[];
+  all[sid].push({
+    datum:id("t_datum").value || new Date().toISOString().slice(0,10),
+    uhr:id("t_time").value,
+    anzahl:id("t_anz").value,
+    thema:id("t_thema").value,
+    grund:id("t_grund").checked, zusatz:id("t_zusatz").checked,
+    verhalten:{
+      ton:valRadio("t_ton"), ton_b:id("t_ton_bem").value,
+      laut:valRadio("t_laut"), laut_b:id("t_laut_bem").value,
+      stimme:valRadio("t_stimme"), stimme_b:id("t_stimme_bem").value,
+      tempo:valRadio("t_tempo"), tempo_b:id("t_tempo_bem").value,
+      begr:valRadio("t_begr"), begr_b:id("t_begr_bem").value,
+      gestik:valRadio("t_gestik"), gestik_b:id("t_gestik_bem").value,
+      blick:valRadio("t_blick"), blick_b:id("t_blick_bem").value,
+      mimik:valRadio("t_mimik"), mimik_b:id("t_mimik_bem").value,
+      ls:valRadio("t_ls"), ls_b:id("t_ls_bem").value
+    },
+    methoden:{
+      frontal:id("t_m_frontal").checked,
+      lehr:id("t_m_lehr").checked,
+      gruppe:id("t_m_gruppe").checked,
+      fragen:id("t_m_fragen").checked,
+      disk:id("t_m_disk").checked
+    },
+    medien:{
+      lehrbuch:id("t_med_lehrbuch").checked,
+      blatt:id("t_med_blatt").checked,
+      white:id("t_med_white").checked,
+      beamer:id("t_med_beamer").checked,
+      handy:id("t_med_handy").checked
+    },
+    stimmung:id("t_stimmung").value,
+    reaktion:id("t_reaktion").value,
+    meth_extra:id("t_meth_extra").value,
+    med_extra:id("t_med_extra").value,
+    bem:id("t_bem").value,
+    ts:Date.now()
+  });
+  setJ(LS_THEO,all);
+  alert("Theorie gespeichert.");
+}
+
+/* =================== PRAXIS SAVE =================== */
+function savePraxis(){
+  const sid=ensureSID(); if(!sid) return;
+  const all=getJ(LS_PRAX,"{}");
+  all[sid]=all[sid]||[];
+  all[sid].push({
+    datum:id("p_datum").value || new Date().toISOString().slice(0,10),
+    dauer:id("p_dauer").value,
+    art:id("p_art").value,
+    inhalte:id("p_inhalte").value,
+    methoden:{
+      demo:id("p_m_demo").checked,
+      verbal:id("p_m_verb").checked,
+      nachf:id("p_m_nachf").checked,
+      reflex:id("p_m_reflex").checked
+    },
+    medien:{
+      modell:id("p_med_modell").checked,
+      tablet:id("p_med_tablet").checked,
+      blatt:id("p_med_blatt").checked,
+      skizze:id("p_med_schSkizze").checked
+    },
+    bew:{
+      bed:valRadio("p_bed"), bed_b:id("p_bed_bem").value,
+      sp:valRadio("p_sp"), sp_b:id("p_sp_bem").value,
+      vr:valRadio("p_vr"), vr_b:id("p_vr_bem").value,
+      park:valRadio("p_park"), park_b:id("p_park_bem").value,
+      ab:valRadio("p_ab"), ab_b:id("p_ab_bem").value,
+      abahn:valRadio("p_abahn"), abahn_b:id("p_abahn_bem").value,
+      sich:valRadio("p_sich"), sich_b:id("p_sich_bem").value,
+      self:valRadio("p_self"), self_b:id("p_self_bem").value
+    },
+    stimmung:id("p_stimmung").value,
+    bem:id("p_bem").value,
+    ts:Date.now()
+  });
+  setJ(LS_PRAX,all);
+  alert("Praxis gespeichert.");
+}
+
+/* =================== OVERVIEW =================== */
+function renderOverview(){
+  const sid=ensureSID(); if(!sid){ id("overview").innerHTML=""; return; }
+  const S=getJ(LS_STUDENTS,"{}")[sid];
+  const B=getJ(LS_BER,"{}")[sid]||[];
+  const T=getJ(LS_THEO,"{}")[sid]||[];
+  const P=getJ(LS_PRAX,"{}")[sid]||[];
+  let html = `<p><span class="badge">${S?.name||"Unbekannt"}</span> <span class="badge">${(S?.klassen||[]).join(", ")}</span></p>`;
+  html += `<h4>Beratung (${B.length})</h4>` + B.map((x,i)=>`<details><summary>#${i+1} – ${x.datum}</summary><pre>${escape(JSON.stringify(x,null,2))}</pre></details>`).join("");
+  html += `<h4>Theorie (${T.length})</h4>` + T.map((x,i)=>`<details><summary>#${i+1} – ${x.datum} ${x.thema||""}</summary><pre>${escape(JSON.stringify(x,null,2))}</pre></details>`).join("");
+  html += `<h4>Praxis (${P.length})</h4>` + P.map((x,i)=>`<details><summary>#${i+1} – ${x.datum} ${x.art||""}</summary><pre>${escape(JSON.stringify(x,null,2))}</pre></details>`).join("");
+  id("overview").innerHTML = html;
+}
+function escape(s){return s.replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m]))}
+
+/* =================== INIT =================== */
+window.addEventListener("load",()=>{
+  loadStudents();
+  switchTab("beratung");
+});
 </script>
 </body>
 </html>
