@@ -650,14 +650,6 @@
 }
 
 	function saveTheorie(){
-	function calcRedeanteil(){
-    const fl = parseInt(document.getElementById("t_redenfl").value) || 0;
-    let fs = 100 - fl;
-    if(fs < 0) fs = 0;
-    if(fs > 100) fs = 100;
-    document.getElementById("t_redefs").value = fs;
-    }
-
 	  const sid=ensureSID(); if(!sid) return;
 	  const all=getJ(LS_THEO,"{}");
 	  all[sid]=all[sid]||[];
@@ -684,7 +676,7 @@
 		  gruppe:id("t_m_gruppe").checked,
 		  fragen:id("t_m_fragen").checked,
 		  disk:id("t_m_disk").checked,
-		  erklärung:id("t_m_erklärung").checked,
+		  erklärung:id("t_m_erklaerung").checked,
 		  ruf:id("t_m_ruf").checked
 		},
 		medien:{
