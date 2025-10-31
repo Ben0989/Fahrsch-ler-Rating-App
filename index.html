@@ -76,10 +76,16 @@
   width: 100%;
   min-height: 300px;
 }
+.gps-map {
+  height: 300px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
 
 	</style>
 	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 	</head>
 	<body>
 
@@ -556,11 +562,11 @@
 </div>
 
 
-	<!-- ÜBERSICHT -->
-	<div id="uebersicht" class="card hidden">
-	  <h3>Übersicht</h3>
-	  <div id="overview"></div>
-	</div>
+<!-- Übersicht -->
+<div id="uebersicht" class="card hidden">
+  <h3>Übersicht</h3>
+  <div id="overview"></div>
+</div>
 
 	<script>
 	/* =================== STORAGE KEYS =================== */
@@ -824,19 +830,119 @@ function savePraxis(){
 }
 
 	/* =================== OVERVIEW =================== */
-	function renderOverview(){
-	  const sid=ensureSID(); if(!sid){ id("overview").innerHTML=""; return; }
-	  const S=getJ(LS_STUDENTS,"{}")[sid];
-	  const B=getJ(LS_BER,"{}")[sid]||[];
-	  const T=getJ(LS_THEO,"{}")[sid]||[];
-	  const P=getJ(LS_PRAX,"{}")[sid]||[];
-	  let html = `<p><span class="badge">${S?.name||"Unbekannt"}</span> <span class="badge">${(S?.klassen||[]).join(", ")}</span></p>`;
-	  html += `<h4>Beratung (${B.length})</h4>` + B.map((x,i)=>`<details><summary>#${i+1} – ${x.datum}</summary><pre>${escape(JSON.stringify(x,null,2))}</pre></details>`).join("");
-	  html += `<h4>Theorie (${T.length})</h4>` + T.map((x,i)=>`<details><summary>#${i+1} – ${x.datum} ${x.thema||""}</summary><pre>${escape(JSON.stringify(x,null,2))}</pre></details>`).join("");
-	  html += `<h4>Praxis (${P.length})</h4>` + P.map((x,i)=>`<details><summary>#${i+1} – ${x.datum} ${x.art||""}</summary><pre>${escape(JSON.stringify(x,null,2))}</pre></details>`).join("");
-	  id("overview").innerHTML = html;
-	}
-	function escape(s){return s.replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m]))}
+
+function renderOverview() {
+  const sid = ensureSID();
+  if (!sid) {
+    id("overview").innerHTML = "";
+    return;
+  }
+
+  const S = getJ(LS_STUDENTS, "{}")[sid];
+  const B = getJ(LS_BER, "{}")[sid] || [];
+  const T = getJ(LS_THEO, "{}")[sid] || [];
+  const P = getJ(LS_PRAX, "{}")[sid] || [];
+
+  // 1. Schülerdaten + Beratung + Theorie
+  let html = `
+    <p><span class="badge">${S?.name || "Unbekannt"}</span> 
+    <span class="badge">${(S?.klassen || []).join(", ")}</span></p>
+
+    <h4>Beratung (${B.length})</h4>
+    ${B.map((x, i) => `
+      <details>
+        <summary>#${i + 1} – ${x.datum}</summary>
+        <pre>${escape(JSON.stringify(x, null, 2))}</pre>
+      </details>
+    `).join("")}
+
+    <h4>Theorie (${T.length})</h4>
+    ${T.map((x, i) => `
+      <details>
+        <summary>#${i + 1} – ${x.datum} ${x.thema || ""}</summary>
+        <pre>${escape(JSON.stringify(x, null, 2))}</pre>
+      </details>
+    `).join("")}
+
+    <h4>Praxis (${P.length})</h4>
+  `;
+
+  id("overview").innerHTML = html;
+
+  // 2. Praxis-Details mit Karte separat anhängen
+  P.forEach((x, i) => {
+    const idMap = `gpsmap_${i}`;
+    const wrap = document.createElement("details");
+    wrap.open = true;
+
+    const points = x.route || [];
+    let stats = "";
+
+    if (points.length > 1) {
+      const start = new Date(points[0].timestamp);
+      const end = new Date(points[points.length - 1].timestamp);
+      const durationMin = ((end - start) / 60000).toFixed(1);
+
+      let dist = 0;
+      for (let j = 1; j < points.length; j++) {
+        dist += haversine(points[j - 1], points[j]);
+      }
+
+      const km = dist.toFixed(2);
+      const avgSpeed = ((dist / (durationMin / 60)) || 0).toFixed(1);
+
+      stats = `📏 ${km} km ⏱️ ${durationMin} Min 🚗 Ø ${avgSpeed} km/h`;
+    }
+
+    wrap.innerHTML = `
+      <summary>#${i + 1} – ${x.datum} ${x.art || ""}</summary>
+      <div class="gps-meta">${stats}</div>
+      <div id="${idMap}" class="gps-map"></div>
+      <pre>${escape(JSON.stringify(x, null, 2))}</pre>
+    `;
+
+    id("overview").appendChild(wrap);
+
+    // Karte initialisieren (wenn Route vorhanden)
+    if (points.length > 1) {
+      setTimeout(() => {
+        const map = L.map(idMap).setView([points[0].lat, points[0].lng], 15);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "&copy; OpenStreetMap"
+        }).addTo(map);
+        const path = L.polyline(points.map(p => [p.lat, p.lng]), {
+          color: "blue"
+        }).addTo(map);
+        map.fitBounds(path.getBounds());
+      }, 200);
+    } else {
+      document.getElementById(idMap).innerText = "Keine Route vorhanden.";
+    }
+  });
+}
+
+// Escape für JSON-Ausgabe im HTML
+function escape(s) {
+  return s.replace(/[&<>"]/g, m => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;"
+  }[m]));
+}
+
+// Haversine-Distanz in km
+function haversine(a, b) {
+  const R = 6371; // Erdradius in km
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLon = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const a1 = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a1), Math.sqrt(1 - a1));
+  return R * c;
+}
 
 	/* =================== INIT =================== */
 	window.addEventListener("load",()=>{
