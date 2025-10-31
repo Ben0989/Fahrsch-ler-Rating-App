@@ -72,8 +72,14 @@
   transform: scale(1.1);           /* etwas größer, angenehmer */
   justify-self: end;               /* bündig rechts */
 }
+#gpsMap {
+  width: 100%;
+  min-height: 300px;
+}
 
 	</style>
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 	</head>
 	<body>
 
@@ -528,6 +534,21 @@
 
   <label class="label">Wie dokumentiert?</label>
   <textarea id="p_doku" rows="2"></textarea>
+  <div class="gps-status" id="gpsStatus">
+  📍 GPS inaktiv
+	</div>
+
+	<button id="gpsToggleBtn" class="primary" onclick="toggleGPS()"> 📍 Tracking starten</button>
+	<div style="margin-top: 10px;">
+  <div id="gpsLiveSpeed">🚗 Geschwindigkeit: –</div>
+  <div id="gpsLiveTime">⏱️ Zeit: –</div>
+  <div id="gpsLiveDist">📏 Strecke: –</div>
+</div>
+
+	<!-- MAP Container -->
+<div id="gpsMap"
+     style="height:300px; border-radius:12px; margin-top:10px; display:none;">
+</div>
 
   <div class="row">
     <button class="primary" onclick="savePraxis()">Praxis speichern</button>
@@ -704,10 +725,20 @@
 	  alert("Theorie gespeichert.");
 	}
 
-	/* =================== PRAXIS SAVE =================== */
-	function savePraxis(){
+/* =================== PRAXIS SAVE =================== */
+function savePraxis(){
   const sid = ensureSID(); 
   if(!sid) return;
+
+  // --- GPS Tracking Prüfung ---
+  if(typeof gpsReady === "undefined") gpsReady = false;
+  if(typeof gpsRoute === "undefined") gpsRoute = [];
+
+  if(!gpsReady || gpsRoute.length === 0){
+    if(!confirm("⚠️ Das GPS-Tracking wurde nicht gestoppt oder es sind keine Punkte vorhanden.\nTrotzdem speichern?")) {
+      return;
+    }
+  }
 
   const all = getJ(LS_PRAX,"{}");
   all[sid] = all[sid] || [];
@@ -778,13 +809,19 @@
     nachgespr: id("p_nach_gespr").value,
     dokumentation: id("p_doku").value,
 
+    // --- GPS-Daten hinzufügen ---
+    route: gpsRoute || [],
+    gps_punkte: gpsRoute.length || 0,
+    gps_abgeschlossen: gpsReady,
+
     ts: Date.now()
   });
 
   setJ(LS_PRAX, all);
-  alert("Praxis gespeichert.");
+  alert("✅ Praxis gespeichert mit " + (gpsRoute.length || 0) + " GPS-Punkten.");
+  resetGPSTracking(); // ← Nur ein Aufruf, keine doppelten Zeilen mehr
+  
 }
-
 
 	/* =================== OVERVIEW =================== */
 	function renderOverview(){
@@ -807,5 +844,131 @@
 	  switchTab("beratung");
 	});
 	</script>
+	<!-- GPS-Tracking-Script -->
+<script>
+let gpsWatchId = null;
+let gpsRoute = [];
+let gpsReady = false;
+let gpsMap = null;
+let gpsPath = null;
+let gpsMarker = null;
+let gpsStartTime = null;
+let gpsDistance = 0;
+let gpsLastPos = null;
+
+/* Hilfsfunktion */
+function haversineDistance(a, b) {
+  const R = 6371; // Erdradius in km
+  const toRad = x => x * Math.PI / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLon = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+
+  const a1 = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+  const c = 2 * Math.atan2(Math.sqrt(a1), Math.sqrt(1 - a1));
+  return R * c;
+}
+
+/* Map initialisieren */
+function initMapIfNeeded(lat, lng) {
+  if (!gpsMap) {
+    gpsMap = L.map('gpsMap').setView([lat, lng], 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(gpsMap);
+    gpsPath = L.polyline([], { color: 'lime' }).addTo(gpsMap);
+    gpsMarker = L.marker([lat, lng]).addTo(gpsMap);
+    document.getElementById('gpsMap').style.display = "block";
+  }
+}
+
+/* GPS starten / stoppen */
+function toggleGPS() {
+  switchTab("praxis");
+  const btn = document.getElementById("gpsToggleBtn");
+  const stat = document.getElementById("gpsStatus");
+  const mapDiv = document.getElementById("gpsMap");
+
+  if (gpsWatchId === null) {
+    gpsRoute = [];
+    gpsReady = false;
+    gpsDistance = 0;
+    gpsStartTime = Date.now();
+    gpsLastPos = null;
+
+    if (gpsMap) {
+      gpsMap.remove();
+      gpsMap = null;
+    }
+
+    mapDiv.style.display = "block";
+
+    gpsWatchId = navigator.geolocation.watchPosition(
+      pos => {
+        const { latitude, longitude } = pos.coords;
+        const timestamp = new Date().toISOString();
+        gpsRoute.push({ lat: latitude, lng: longitude, timestamp });
+
+        initMapIfNeeded(latitude, longitude);
+
+        gpsMarker.setLatLng([latitude, longitude]);
+        gpsPath.addLatLng([latitude, longitude]);
+        gpsMap.panTo([latitude, longitude]);
+
+        // Distanz berechnen
+        if (gpsLastPos) {
+          const d = haversineDistance(gpsLastPos, { lat: latitude, lng: longitude });
+          gpsDistance += d;
+        }
+        gpsLastPos = { lat: latitude, lng: longitude };
+
+        // Live-Anzeigen aktualisieren
+        const speedKmh = pos.coords.speed ? (pos.coords.speed * 3.6).toFixed(1) + " km/h" : "–";
+        const elapsedMin = ((Date.now() - gpsStartTime) / 60000).toFixed(1);
+
+        document.getElementById("gpsLiveSpeed").innerText = `🚗 ${speedKmh}`;
+        document.getElementById("gpsLiveTime").innerText = `⏱️ ${elapsedMin} Min`;
+        document.getElementById("gpsLiveDist").innerText = `📏 ${gpsDistance.toFixed(2)} km`;
+
+        stat.innerText = `📡 Tracking läuft… Punkte: ${gpsRoute.length}`;
+      },
+      err => {
+        stat.innerText = "❌ Fehler: " + err.message;
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+    );
+
+    btn.innerText = "⏹️ Tracking stoppen";
+    stat.innerText = "📡 Tracking gestartet…";
+  } else {
+    navigator.geolocation.clearWatch(gpsWatchId);
+    gpsWatchId = null;
+    gpsReady = true;
+
+    btn.innerText = "📍 Tracking starten";
+    stat.innerText = `⏹️ Tracking gestoppt. Punkte: ${gpsRoute.length}`;
+  }
+}
+
+/* Reset nach dem Speichern */
+function resetGPSTracking() {
+  gpsRoute = [];
+  gpsReady = false;
+  gpsDistance = 0;
+  gpsLastPos = null;
+  gpsStartTime = null;
+
+  document.getElementById("gpsLiveSpeed").innerText = "🚗 Geschwindigkeit: –";
+  document.getElementById("gpsLiveTime").innerText = "⏱️ Zeit: –";
+  document.getElementById("gpsLiveDist").innerText = "📏 Strecke: –";
+
+  if (gpsMap) {
+    gpsMap.remove();
+    gpsMap = null;
+  }
+}
+</script>
+ 
 	</body>
 	</html>
